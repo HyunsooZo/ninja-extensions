@@ -1,115 +1,166 @@
 # JSON to Object Converter
 
-VSCode 확장 프로그램으로 JSON을 다양한 언어의 타입 정의로 변환합니다.
+A VSCode extension that converts JSON to type definitions for various programming languages.
 
-## 지원 언어
+## Supported Languages
 
-- **TypeScript** - Interface 생성
-- **JavaScript** - JSDoc + Class 생성
-- **Python** - Dataclass 생성
-- **Rust** - Struct with Serde 생성
-- **Go** - Struct with JSON tags 생성
-- **C** - Struct 생성
-- **C++** - Class 생성
-- **Java** - Class with Getters/Setters 생성
-- **Kotlin** - Data Class 생성
+- **TypeScript** - Interface
+- **JavaScript** - JSDoc + Class
+- **Python** - Dataclass
+- **Java** - Class with Getters/Setters
+- **Kotlin** - Data Class
+- **Go** - Struct with JSON tags
+- **Rust** - Struct with Serde
+- **C** - Typedef Struct
+- **C++** - Class
 
-## 사용 방법
+## Features
 
-1. JSON 텍스트를 선택
-2. 우클릭 → **"Convert JSON to Object"** 선택
-3. 원하는 언어 선택
-4. 타입/클래스 이름 입력
-5. 생성된 코드 확인!
+- Automatic nested object handling (generates separate classes/structs)
+- Array element type inference
+- Language-specific naming conventions (PascalCase, snake_case, etc.)
 
-## 예제
+## Usage
 
-### 입력 JSON
+1. Select JSON text in your editor
+2. Right-click → **"Convert JSON to Object"** (or `Cmd+Shift+P` → "Convert JSON to Object")
+3. Choose your target language
+4. Enter the type/class name
+5. Generated code opens in a new tab
+
+## Examples
+
+### Input JSON
 ```json
 {
   "name": "John Doe",
   "age": 30,
   "email": "john@example.com",
   "isActive": true,
-  "tags": ["developer", "designer"]
+  "tags": ["developer", "designer"],
+  "address": {
+    "city": "Seoul",
+    "zipCode": "12345"
+  }
 }
 ```
 
-### TypeScript 출력
+### TypeScript Output
 ```typescript
-interface MyObject {
+interface Address {
+  city: string;
+  zipCode: string;
+}
+
+interface User {
   name: string;
   age: number;
   email: string;
   isActive: boolean;
   tags: string[];
+  address: Address;
 }
 ```
 
-### Python 출력
+### Python Output
 ```python
 from dataclasses import dataclass
 from typing import Any
 
 @dataclass
-class MyObject:
+class Address:
+    city: str
+    zip_code: str
+
+@dataclass
+class User:
     name: str
-    age: float
+    age: int
     email: str
     is_active: bool
     tags: list[str]
+    address: Address
 ```
 
-### Rust 출력
+### Java Output
+```java
+import java.util.List;
+
+public class User {
+    private String name;
+    private Integer age;
+    private String email;
+    private Boolean isActive;
+    private List<String> tags;
+    private Address address;
+
+    // getters and setters...
+
+    public static class Address {
+        private String city;
+        private String zipCode;
+        // getters and setters...
+    }
+}
+```
+
+### Go Output
+```go
+type Address struct {
+	City    string `json:"city"`
+	ZipCode string `json:"zipCode"`
+}
+
+type User struct {
+	Name     string   `json:"name"`
+	Age      int64    `json:"age"`
+	Email    string   `json:"email"`
+	IsActive bool     `json:"isActive"`
+	Tags     []string `json:"tags"`
+	Address  Address  `json:"address"`
+}
+```
+
+### Rust Output
 ```rust
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MyObject {
+pub struct Address {
+    pub city: String,
+    #[serde(rename = "zipCode")]
+    pub zip_code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
     pub name: String,
-    pub age: f64,
+    pub age: i64,
     pub email: String,
     #[serde(rename = "isActive")]
     pub is_active: bool,
     pub tags: Vec<String>,
+    pub address: Address,
 }
 ```
 
-### Go 출력
-```go
-type MyObject struct {
-	Name     string   `json:"name"`
-	Age      float64  `json:"age"`
-	Email    string   `json:"email"`
-	IsActive bool     `json:"isActive"`
-	Tags     []string `json:"tags"`
-}
-```
+## Installation
 
-## 설치 방법
+### From Marketplace
+Search for "JSON to Objects" in VSCode Extensions.
 
-### 로컬에서 테스트
-1. 이 폴더를 VSCode로 열기
-2. F5 키를 눌러 Extension Development Host 실행
-3. 새 창에서 테스트
-
-### 패키징 및 설치
+### Local Development
 ```bash
+# Install dependencies
+npm install
+
+# Test locally (F5 in VSCode)
+# Or package and install:
 npm install -g @vscode/vsce
 vsce package
 code --install-extension json-to-object-0.0.1.vsix
 ```
 
-## 개발
-
-```bash
-# 의존성 설치
-npm install
-
-# 린트
-npm run lint
-```
-
-## 라이선스
+## License
 
 MIT
