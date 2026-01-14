@@ -2,6 +2,12 @@
 
 A VSCode extension that converts JSON to type definitions for various programming languages.
 
+## Demo
+
+![사용 예시 1](images/practice1.gif)
+
+![사용 예시 2](images/practice2.gif)
+
 ## Supported Languages
 
 - **TypeScript** - Interface
