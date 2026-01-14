@@ -4,7 +4,7 @@
   "description": "Convert JSON to type definitions for Python, Rust, C, C++, JavaScript, TypeScript, Java, and Kotlin",
   "version": "0.0.1",
   "publisher": "HyunsooJo",
-  "icon": "icon.png",
+  "icon": "images/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/HyunsooZo/ninja-extentions",

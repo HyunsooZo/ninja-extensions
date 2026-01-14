@@ -1,7 +1,10 @@
+const { toPascalCase } = require('../utils');
+
 function typeToTypeScript(typeInfo) {
     if (typeof typeInfo === 'string') {
         switch (typeInfo) {
             case 'string': return 'string';
+            case 'integer': return 'number';
             case 'number': return 'number';
             case 'boolean': return 'boolean';
             case 'null': return 'null';
@@ -15,11 +18,32 @@ function typeToTypeScript(typeInfo) {
     }
 
     if (typeInfo.type === 'object') {
-        // 중첩된 객체는 별도 인터페이스로
         return 'object';
     }
 
-    return 'any';
+    switch (typeInfo.type) {
+        case 'string': return 'string';
+        case 'integer': return 'number';
+        case 'number': return 'number';
+        case 'boolean': return 'boolean';
+        case 'null': return 'null';
+        default: return 'any';
+    }
+}
+
+function getTypeForProperty(key, prop) {
+    if (prop.type && typeof prop.type === 'object') {
+        if (prop.type.type === 'object' && prop.type.properties) {
+            return toPascalCase(key);
+        }
+        if (prop.type.type === 'array' && prop.type.itemType) {
+            if (prop.type.itemType.type === 'object' && prop.type.itemType.properties) {
+                return `${toPascalCase(key)}Item[]`;
+            }
+            return typeToTypeScript(prop.type);
+        }
+    }
+    return typeToTypeScript(prop.type);
 }
 
 function generateInterface(properties, name, indent = '') {
@@ -27,15 +51,8 @@ function generateInterface(properties, name, indent = '') {
 
     for (const [key, prop] of Object.entries(properties)) {
         const optional = prop.optional ? '?' : '';
-
-        if (typeof prop.type === 'object' && prop.type.type === 'object') {
-            // 중첩된 객체
-            const nestedName = capitalize(key);
-            code += `${indent}  ${key}${optional}: ${nestedName};\n`;
-        } else {
-            const tsType = typeToTypeScript(prop.type);
-            code += `${indent}  ${key}${optional}: ${tsType};\n`;
-        }
+        const tsType = getTypeForProperty(key, prop);
+        code += `${indent}  ${key}${optional}: ${tsType};\n`;
     }
 
     code += `${indent}}`;
@@ -46,35 +63,41 @@ function generateNestedInterfaces(properties, baseName) {
     let interfaces = [];
 
     for (const [key, prop] of Object.entries(properties)) {
-        if (typeof prop.type === 'object' && prop.type.type === 'object') {
-            const nestedName = capitalize(key);
-            interfaces.push(generateInterface(prop.type.properties, nestedName));
-            // 재귀적으로 중첩된 인터페이스 생성
-            interfaces.push(...generateNestedInterfaces(prop.type.properties, nestedName));
+        if (prop.type && typeof prop.type === 'object') {
+            if (prop.type.type === 'object' && prop.type.properties) {
+                const nestedName = toPascalCase(key);
+                // Recursively generate nested interfaces first
+                interfaces.push(...generateNestedInterfaces(prop.type.properties, nestedName));
+                interfaces.push(generateInterface(prop.type.properties, nestedName));
+            } else if (prop.type.type === 'array' && prop.type.itemType) {
+                if (prop.type.itemType.type === 'object' && prop.type.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    interfaces.push(...generateNestedInterfaces(prop.type.itemType.properties, nestedName));
+                    interfaces.push(generateInterface(prop.type.itemType.properties, nestedName));
+                }
+            }
         }
     }
 
     return interfaces;
 }
 
-function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 function generate(parsedData, typeName) {
+    const interfaceName = toPascalCase(typeName);
+
     let code = '';
 
-    // 중첩된 인터페이스들 먼저 생성
-    const nestedInterfaces = generateNestedInterfaces(parsedData.properties, typeName);
+    // Generate nested interfaces first
+    const nestedInterfaces = generateNestedInterfaces(parsedData.properties, interfaceName);
     if (nestedInterfaces.length > 0) {
         code += nestedInterfaces.join('\n\n') + '\n\n';
     }
 
-    // 메인 인터페이스 생성
-    code += generateInterface(parsedData.properties, typeName);
+    // Generate main interface
+    code += generateInterface(parsedData.properties, interfaceName);
 
     if (parsedData.isArray) {
-        code += `\n\ntype ${typeName}Array = ${typeName}[];`;
+        code += `\n\ntype ${interfaceName}Array = ${interfaceName}[];`;
     }
 
     return code;

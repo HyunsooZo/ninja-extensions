@@ -10,10 +10,10 @@ function analyzeType(value) {
 
     if (Array.isArray(value)) {
         if (value.length === 0) {
-            return { type: 'array', elementType: { type: 'any' } };
+            return { type: 'array', itemType: { type: 'any' } };
         }
-        const elementType = analyzeType(value[0]);
-        return { type: 'array', elementType };
+        const itemType = analyzeType(value[0]);
+        return { type: 'array', itemType };
     }
 
     if (typeof value === 'object') {
