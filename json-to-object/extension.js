@@ -154,59 +154,77 @@ function activate(context) {
 
             // Java 전용 옵션
             if (language.value === 'java') {
-                // Lombok 옵션
-                const lombokChoice = await vscode.window.showQuickPick([
-                    { label: 'Plain POJO (no Lombok)', value: false },
-                    { label: 'Use Lombok (@Data, @AllArgsConstructor, @NoArgsConstructor)', value: true }
+                // Class vs Record 선택
+                const classTypeChoice = await vscode.window.showQuickPick([
+                    { label: 'Class (traditional)', value: 'class' },
+                    { label: 'Record (Java 14+)', value: 'record' }
                 ], {
-                    placeHolder: 'Use Lombok annotations?'
+                    placeHolder: 'Generate as Class or Record?'
                 });
 
-                if (!lombokChoice) {
+                if (!classTypeChoice) {
                     return;
                 }
-                options.useLombok = lombokChoice.value;
+                options.useRecord = classTypeChoice.value === 'record';
 
-                // Lombok이 아닐 때만 생성자/getter-setter 옵션 표시
-                if (!options.useLombok) {
-                    const constructorChoice = await vscode.window.showQuickPick([
-                        { label: 'No constructors', value: false },
-                        { label: 'Include constructors (NoArgs + AllArgs)', value: true }
+                // Record가 아닐 때만 Lombok/생성자/getter-setter 옵션 표시
+                if (!options.useRecord) {
+                    // Lombok 옵션
+                    const lombokChoice = await vscode.window.showQuickPick([
+                        { label: 'Plain POJO (no Lombok)', value: 'none' },
+                        { label: 'Use Lombok @Data (@Data, @AllArgsConstructor, @NoArgsConstructor)', value: 'data' },
+                        { label: 'Use Lombok @Getter/@Setter (@Getter, @Setter, @AllArgsConstructor, @NoArgsConstructor)', value: 'getter-setter' }
                     ], {
-                        placeHolder: 'Include constructors?'
+                        placeHolder: 'Use Lombok annotations?'
                     });
 
-                    if (!constructorChoice) {
+                    if (!lombokChoice) {
                         return;
                     }
-                    options.includeConstructor = constructorChoice.value;
+                    options.lombokMode = lombokChoice.value; // 'none', 'data', 'getter-setter'
+                    options.useLombok = lombokChoice.value !== 'none';
 
-                    const getterSetterChoice = await vscode.window.showQuickPick([
-                        { label: 'Include Getter/Setter', value: true },
-                        { label: 'Fields only (no Getter/Setter)', value: false }
-                    ], {
-                        placeHolder: 'Include Getter/Setter methods?'
-                    });
+                    // Lombok이 아닐 때만 생성자/getter-setter 옵션 표시
+                    if (!options.useLombok) {
+                        const constructorChoice = await vscode.window.showQuickPick([
+                            { label: 'No constructors', value: false },
+                            { label: 'Include constructors (NoArgs + AllArgs)', value: true }
+                        ], {
+                            placeHolder: 'Include constructors?'
+                        });
 
-                    if (!getterSetterChoice) {
-                        return;
+                        if (!constructorChoice) {
+                            return;
+                        }
+                        options.includeConstructor = constructorChoice.value;
+
+                        const getterSetterChoice = await vscode.window.showQuickPick([
+                            { label: 'Include Getter/Setter', value: true },
+                            { label: 'Fields only (no Getter/Setter)', value: false }
+                        ], {
+                            placeHolder: 'Include Getter/Setter methods?'
+                        });
+
+                        if (!getterSetterChoice) {
+                            return;
+                        }
+                        options.includeGetterSetter = getterSetterChoice.value;
                     }
-                    options.includeGetterSetter = getterSetterChoice.value;
-                }
 
-                // 이너 클래스 옵션 (single file 모드일 때만)
-                if (!options.multipleFiles) {
-                    const innerClassChoice = await vscode.window.showQuickPick([
-                        { label: 'Inner Class (static nested)', value: true },
-                        { label: 'Separate Classes', value: false }
-                    ], {
-                        placeHolder: 'How should nested objects be generated?'
-                    });
+                    // 이너 클래스 옵션 (single file 모드일 때만)
+                    if (!options.multipleFiles) {
+                        const innerClassChoice = await vscode.window.showQuickPick([
+                            { label: 'Inner Class (static nested)', value: true },
+                            { label: 'Separate Classes', value: false }
+                        ], {
+                            placeHolder: 'How should nested objects be generated?'
+                        });
 
-                    if (!innerClassChoice) {
-                        return;
+                        if (!innerClassChoice) {
+                            return;
+                        }
+                        options.useInnerClass = innerClassChoice.value;
                     }
-                    options.useInnerClass = innerClassChoice.value;
                 }
             }
 

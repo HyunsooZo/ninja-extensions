@@ -3,11 +3,13 @@ const { toPascalCase, toCamelCase, collectNestedTypes } = require('../utils');
 /**
  * @typedef {Object} JavaOptions
  * @property {boolean} [useJsonProperty] - @JsonProperty 어노테이션 추가
- * @property {boolean} [useLombok] - Lombok 사용 (@Data, @AllArgsConstructor 등)
+ * @property {boolean} [useLombok] - Lombok 사용 여부
+ * @property {'none'|'data'|'getter-setter'} [lombokMode] - Lombok 모드: none, data(@Data), getter-setter(@Getter/@Setter)
  * @property {boolean} [includeConstructor] - 생성자 포함 (Lombok이 아닐 때)
  * @property {boolean} [includeGetterSetter] - Getter/Setter 포함 (Lombok이 아닐 때, 기본 true)
  * @property {boolean} [useInnerClass] - Inner class 사용
  * @property {boolean} [multipleFiles] - 여러 파일로 분리
+ * @property {boolean} [useRecord] - Java record 사용 (Java 14+)
  */
 
 function typeToJava(typeInfo) {
@@ -63,13 +65,19 @@ function getTypeForProperty(key, prop) {
 function generateClass(properties, name, isNested = false, options = {}) {
     const indent = isNested ? '    ' : '';
     const modifier = isNested ? 'public static ' : 'public ';
-    const { useJsonProperty, useLombok, includeConstructor, includeGetterSetter = true } = options;
+    const { useJsonProperty, useLombok, lombokMode, includeConstructor, includeGetterSetter = true } = options;
 
     let code = '';
 
     // Lombok 어노테이션
     if (useLombok) {
-        code += `${indent}@Data\n`;
+        if (lombokMode === 'getter-setter') {
+            code += `${indent}@Getter\n`;
+            code += `${indent}@Setter\n`;
+        } else {
+            // lombokMode === 'data' or legacy support
+            code += `${indent}@Data\n`;
+        }
         code += `${indent}@NoArgsConstructor\n`;
         code += `${indent}@AllArgsConstructor\n`;
     }
@@ -191,13 +199,119 @@ function buildImports(options = {}) {
     if (options.useJsonProperty) {
         imports += 'import com.fasterxml.jackson.annotation.JsonProperty;\n';
     }
-    if (options.useLombok) {
-        imports += 'import lombok.Data;\n';
+    if (options.useLombok && !options.useRecord) {
+        if (options.lombokMode === 'getter-setter') {
+            imports += 'import lombok.Getter;\n';
+            imports += 'import lombok.Setter;\n';
+        } else {
+            imports += 'import lombok.Data;\n';
+        }
         imports += 'import lombok.NoArgsConstructor;\n';
         imports += 'import lombok.AllArgsConstructor;\n';
     }
     imports += '\n';
     return imports;
+}
+
+/**
+ * Java record 클래스 생성
+ */
+function generateRecord(properties, name, options = {}) {
+    const { useJsonProperty } = options;
+    const entries = Object.entries(properties);
+
+    let code = `public record ${name}(\n`;
+
+    for (let i = 0; i < entries.length; i++) {
+        const [key, prop] = entries[i];
+        const javaType = getTypeForProperty(key, prop);
+        const fieldName = toCamelCase(key);
+        const isLast = i === entries.length - 1;
+
+        if (useJsonProperty && key !== fieldName) {
+            code += `    @JsonProperty("${key}") `;
+        } else {
+            code += `    `;
+        }
+        code += `${javaType} ${fieldName}${isLast ? '' : ','}\n`;
+    }
+
+    if (entries.length === 0) {
+        code = `public record ${name}(`;
+    }
+
+    code += `) {}`;
+
+    return code;
+}
+
+/**
+ * 중첩된 record 클래스들을 생성 (별도 record로)
+ */
+function generateNestedRecords(properties, options = {}) {
+    let recordsCode = '';
+
+    for (const [key, prop] of Object.entries(properties)) {
+        if (prop.type === 'object' && prop.properties) {
+            const nestedName = toPascalCase(key);
+            recordsCode += generateNestedRecords(prop.properties, options);
+            recordsCode += generateRecord(prop.properties, nestedName, options);
+            recordsCode += '\n\n';
+        } else if (prop.type === 'array' && prop.itemType) {
+            if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                const nestedName = toPascalCase(key) + 'Item';
+                recordsCode += generateNestedRecords(prop.itemType.properties, options);
+                recordsCode += generateRecord(prop.itemType.properties, nestedName, options);
+                recordsCode += '\n\n';
+            }
+        }
+    }
+
+    return recordsCode;
+}
+
+/**
+ * 여러 파일로 record 생성
+ */
+function generateMultipleRecordFiles(parsedData, typeName, options = {}) {
+    const className = toPascalCase(typeName);
+    const files = [];
+    const imports = buildImports(options);
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${nestedName}.java`,
+                    content: imports + generateRecord(prop.properties, nestedName, options),
+                    language: 'java'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${nestedName}.java`,
+                        content: imports + generateRecord(prop.itemType.properties, nestedName, options),
+                        language: 'java'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    // Generate main record
+    files.push({
+        filename: `${className}.java`,
+        content: imports + generateRecord(parsedData.properties, className, options),
+        language: 'java'
+    });
+
+    return files;
 }
 
 function generateMultipleFiles(parsedData, typeName, options = {}) {
@@ -242,6 +356,28 @@ function generateMultipleFiles(parsedData, typeName, options = {}) {
 }
 
 function generate(parsedData, typeName, options = {}) {
+    // Record 타입 처리
+    if (options.useRecord) {
+        if (options.multipleFiles) {
+            return generateMultipleRecordFiles(parsedData, typeName, options);
+        }
+
+        const className = toPascalCase(typeName);
+        let code = buildImports(options);
+
+        // 중첩된 record들 먼저 생성
+        const nestedRecords = generateNestedRecords(parsedData.properties, options);
+        if (nestedRecords) {
+            code += nestedRecords;
+        }
+
+        // 메인 record 생성
+        code += generateRecord(parsedData.properties, className, options);
+
+        return code;
+    }
+
+    // 일반 Class 처리
     if (options.multipleFiles) {
         return generateMultipleFiles(parsedData, typeName, options);
     }
