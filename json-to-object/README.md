@@ -4,9 +4,8 @@ A VSCode extension that converts JSON to type definitions for various programmin
 
 ## Demo
 
-![사용 예시 1](images/practice1.gif)
-
-![사용 예시 2](images/practice2.gif)
+![practice 1](https://raw.githubusercontent.com/HyunsooZo/ninja-extentions/main/json-to-object/images/practice2.gif)
+![practice 2](https://raw.githubusercontent.com/HyunsooZo/ninja-extentions/main/json-to-object/images/practice2.gif)
 
 ## Supported Languages
 
