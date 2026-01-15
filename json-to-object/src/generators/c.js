@@ -87,7 +87,51 @@ function generateNestedStructs(properties) {
     return nestedCode;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const structName = toPascalCase(typeName);
+    const files = [];
+    const includes = `#include <stddef.h>\n\n`;
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = key;
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${toSnakeCase(nestedName)}.h`,
+                    content: includes + generateStruct(prop.properties, nestedName),
+                    language: 'c'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = key + '_item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${toSnakeCase(nestedName)}.h`,
+                        content: includes + generateStruct(prop.itemType.properties, nestedName),
+                        language: 'c'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    files.push({
+        filename: `${toSnakeCase(structName)}.h`,
+        content: includes + generateStruct(parsedData.properties, structName),
+        language: 'c'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const structName = toPascalCase(typeName);
 
     let code = `#include <stddef.h>\n\n`;

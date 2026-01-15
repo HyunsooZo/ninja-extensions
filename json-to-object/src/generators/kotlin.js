@@ -91,7 +91,50 @@ function generateNestedDataClasses(properties) {
     return nestedCode;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const className = toPascalCase(typeName);
+    const files = [];
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${nestedName}.kt`,
+                    content: generateDataClass(prop.properties, nestedName),
+                    language: 'kotlin'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${nestedName}.kt`,
+                        content: generateDataClass(prop.itemType.properties, nestedName),
+                        language: 'kotlin'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    files.push({
+        filename: `${className}.kt`,
+        content: generateDataClass(parsedData.properties, className),
+        language: 'kotlin'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const className = toPascalCase(typeName);
 
     let code = '';

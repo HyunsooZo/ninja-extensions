@@ -59,9 +59,24 @@ function activate(context) {
                 return;
             }
 
-            // 이너 클래스 옵션 (Java만 해당)
-            let options = {};
-            if (language.value === 'java') {
+            // 출력 모드 선택
+            const outputMode = await vscode.window.showQuickPick([
+                { label: 'Single file', value: 'single' },
+                { label: 'Multiple tabs (per type)', value: 'multiple' }
+            ], {
+                placeHolder: 'How should the output be organized?'
+            });
+
+            if (!outputMode) {
+                return;
+            }
+
+            let options = {
+                multipleFiles: outputMode.value === 'multiple'
+            };
+
+            // 이너 클래스 옵션 (Java만 해당, single file 모드일 때만)
+            if (language.value === 'java' && !options.multipleFiles) {
                 const innerClassChoice = await vscode.window.showQuickPick([
                     { label: 'Inner Class (static nested)', value: true },
                     { label: 'Separate Classes', value: false }
@@ -75,16 +90,28 @@ function activate(context) {
                 options.useInnerClass = innerClassChoice.value;
             }
 
-            const generatedCode = generator.generate(parsedData, typeName, options);
+            const result = generator.generate(parsedData, typeName, options);
 
-            // 새 문서에 표시
-            const doc = await vscode.workspace.openTextDocument({
-                content: generatedCode,
-                language: language.value === 'cpp' ? 'cpp' : language.value
-            });
-
-            await vscode.window.showTextDocument(doc);
-            vscode.window.showInformationMessage(`Successfully converted to ${language.label}`);
+            // 결과 처리
+            if (Array.isArray(result)) {
+                // 여러 탭으로 열기
+                for (const file of result) {
+                    const doc = await vscode.workspace.openTextDocument({
+                        content: file.content,
+                        language: file.language
+                    });
+                    await vscode.window.showTextDocument(doc, { preview: false });
+                }
+                vscode.window.showInformationMessage(`Successfully converted to ${language.label} (${result.length} files)`);
+            } else {
+                // 단일 파일
+                const doc = await vscode.workspace.openTextDocument({
+                    content: result,
+                    language: language.value === 'cpp' ? 'cpp' : language.value
+                });
+                await vscode.window.showTextDocument(doc);
+                vscode.window.showInformationMessage(`Successfully converted to ${language.label}`);
+            }
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error: ${error.message}`);

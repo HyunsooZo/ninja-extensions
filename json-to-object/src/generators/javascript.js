@@ -93,7 +93,56 @@ function generateNestedClasses(properties) {
     return nestedCode;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const className = toPascalCase(typeName);
+    const files = [];
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type && typeof prop.type === 'object') {
+                if (prop.type.type === 'object' && prop.type.properties) {
+                    const nestedName = toPascalCase(key);
+                    collectFiles(prop.type.properties);
+                    files.push({
+                        filename: `${nestedName}.js`,
+                        content: generateClass(prop.type.properties, nestedName),
+                        language: 'javascript'
+                    });
+                } else if (prop.type.type === 'array' && prop.type.itemType) {
+                    if (prop.type.itemType.type === 'object' && prop.type.itemType.properties) {
+                        const nestedName = toPascalCase(key) + 'Item';
+                        collectFiles(prop.type.itemType.properties);
+                        files.push({
+                            filename: `${nestedName}.js`,
+                            content: generateClass(prop.type.itemType.properties, nestedName),
+                            language: 'javascript'
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    let mainContent = generateClass(parsedData.properties, className);
+    if (parsedData.isArray) {
+        mainContent += `\n\n/**\n * @type {Array<${className}>}\n */`;
+    }
+    files.push({
+        filename: `${className}.js`,
+        content: mainContent,
+        language: 'javascript'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const className = toPascalCase(typeName);
 
     let code = '';

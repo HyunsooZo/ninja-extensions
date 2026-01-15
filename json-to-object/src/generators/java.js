@@ -133,7 +133,83 @@ function generateSeparateClasses(properties) {
     return separateCode;
 }
 
+function generateMultipleFiles(parsedData, typeName) {
+    const className = toPascalCase(typeName);
+    const files = [];
+    const imports = `import java.util.List;\n\n`;
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${nestedName}.java`,
+                    content: imports + generateClass(prop.properties, nestedName, false),
+                    language: 'java'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${nestedName}.java`,
+                        content: imports + generateClass(prop.itemType.properties, nestedName, false),
+                        language: 'java'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    // Generate main class
+    let mainCode = imports + `public class ${className} {\n`;
+    const entries = Object.entries(parsedData.properties);
+
+    for (const [key, prop] of entries) {
+        const javaType = getTypeForProperty(key, prop);
+        const fieldName = toCamelCase(key);
+        mainCode += `    private ${javaType} ${fieldName};\n`;
+    }
+
+    if (entries.length === 0) {
+        mainCode += `    // Empty class\n`;
+    }
+
+    mainCode += `\n`;
+
+    for (const [key, prop] of entries) {
+        const javaType = getTypeForProperty(key, prop);
+        const fieldName = toCamelCase(key);
+        const capitalizedField = toPascalCase(key);
+
+        mainCode += `    public ${javaType} get${capitalizedField}() {\n`;
+        mainCode += `        return ${fieldName};\n`;
+        mainCode += `    }\n\n`;
+
+        mainCode += `    public void set${capitalizedField}(${javaType} ${fieldName}) {\n`;
+        mainCode += `        this.${fieldName} = ${fieldName};\n`;
+        mainCode += `    }\n\n`;
+    }
+
+    mainCode += `}`;
+
+    files.push({
+        filename: `${className}.java`,
+        content: mainCode,
+        language: 'java'
+    });
+
+    return files;
+}
+
 function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const className = toPascalCase(typeName);
     const useInnerClass = options.useInnerClass !== false; // 기본값 true
 

@@ -92,7 +92,51 @@ function generateNestedStructs(properties) {
     return nestedCode;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const structName = toPascalCase(typeName);
+    const files = [];
+    const imports = 'use serde::{Deserialize, Serialize};\n\n';
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${toSnakeCase(nestedName)}.rs`,
+                    content: imports + generateStruct(prop.properties, nestedName),
+                    language: 'rust'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${toSnakeCase(nestedName)}.rs`,
+                        content: imports + generateStruct(prop.itemType.properties, nestedName),
+                        language: 'rust'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    files.push({
+        filename: `${toSnakeCase(structName)}.rs`,
+        content: imports + generateStruct(parsedData.properties, structName),
+        language: 'rust'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const structName = toPascalCase(typeName);
 
     let code = 'use serde::{Deserialize, Serialize};\n\n';

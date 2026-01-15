@@ -89,7 +89,50 @@ function generateNestedStructs(properties) {
     return nestedCode;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const structName = toPascalCase(typeName);
+    const files = [];
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${nestedName}.go`,
+                    content: generateStruct(prop.properties, nestedName),
+                    language: 'go'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${nestedName}.go`,
+                        content: generateStruct(prop.itemType.properties, nestedName),
+                        language: 'go'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    files.push({
+        filename: `${structName}.go`,
+        content: generateStruct(parsedData.properties, structName),
+        language: 'go'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const structName = toPascalCase(typeName);
 
     let code = '';

@@ -92,7 +92,51 @@ function generateNestedClasses(properties) {
     return nestedCode;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const className = toPascalCase(typeName);
+    const files = [];
+    const includes = `#include <string>\n#include <vector>\n#include <any>\n\n`;
+
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${nestedName}.hpp`,
+                    content: includes + generateClass(prop.properties, nestedName),
+                    language: 'cpp'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${nestedName}.hpp`,
+                        content: includes + generateClass(prop.itemType.properties, nestedName),
+                        language: 'cpp'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    files.push({
+        filename: `${className}.hpp`,
+        content: includes + generateClass(parsedData.properties, className),
+        language: 'cpp'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const className = toPascalCase(typeName);
 
     let code = `#include <string>\n#include <vector>\n#include <any>\n\n`;

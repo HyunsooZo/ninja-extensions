@@ -64,7 +64,37 @@ function generateDataclass(properties, name, nestedTypes) {
     return code;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const className = toPascalCase(typeName);
+    const nestedTypes = collectNestedTypes(parsedData.properties, className);
+    const files = [];
+
+    const imports = 'from dataclasses import dataclass\nfrom typing import Any\n\n';
+
+    // Generate nested classes as separate files
+    for (const nested of nestedTypes) {
+        files.push({
+            filename: `${nested.name}.py`,
+            content: imports + generateDataclass(nested.properties, nested.name, nestedTypes),
+            language: 'python'
+        });
+    }
+
+    // Generate main class
+    files.push({
+        filename: `${className}.py`,
+        content: imports + generateDataclass(parsedData.properties, className, nestedTypes),
+        language: 'python'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const className = toPascalCase(typeName);
     const nestedTypes = collectNestedTypes(parsedData.properties, className);
 

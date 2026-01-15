@@ -78,7 +78,56 @@ function generateNestedInterfaces(properties, baseName) {
     return interfaces;
 }
 
-function generate(parsedData, typeName) {
+function generateMultipleFiles(parsedData, typeName) {
+    const interfaceName = toPascalCase(typeName);
+    const files = [];
+
+    // Collect all nested interfaces as separate files
+    function collectFiles(properties) {
+        for (const [key, prop] of Object.entries(properties)) {
+            if (prop.type === 'object' && prop.properties) {
+                const nestedName = toPascalCase(key);
+                collectFiles(prop.properties);
+                files.push({
+                    filename: `${nestedName}.ts`,
+                    content: generateInterface(prop.properties, nestedName),
+                    language: 'typescript'
+                });
+            } else if (prop.type === 'array' && prop.itemType) {
+                if (prop.itemType.type === 'object' && prop.itemType.properties) {
+                    const nestedName = toPascalCase(key) + 'Item';
+                    collectFiles(prop.itemType.properties);
+                    files.push({
+                        filename: `${nestedName}.ts`,
+                        content: generateInterface(prop.itemType.properties, nestedName),
+                        language: 'typescript'
+                    });
+                }
+            }
+        }
+    }
+
+    collectFiles(parsedData.properties);
+
+    // Add main interface
+    let mainContent = generateInterface(parsedData.properties, interfaceName);
+    if (parsedData.isArray) {
+        mainContent += `\n\ntype ${interfaceName}Array = ${interfaceName}[];`;
+    }
+    files.push({
+        filename: `${interfaceName}.ts`,
+        content: mainContent,
+        language: 'typescript'
+    });
+
+    return files;
+}
+
+function generate(parsedData, typeName, options = {}) {
+    if (options.multipleFiles) {
+        return generateMultipleFiles(parsedData, typeName);
+    }
+
     const interfaceName = toPascalCase(typeName);
 
     let code = '';
