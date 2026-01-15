@@ -3,11 +3,18 @@
   "age": 34,
   "email": "bzhs1992@example.com",
   "isActive": true,
-  "tags": ["developer", "designer"],
+  "tags": [
+    "developer",
+    "designer"
+  ],
   "address": {
     "street": "Hwarang-ro 322",
     "city": "Seoul",
     "zipCode": "12345"
   },
-  "scores": [95, 87, 92]
+  "scores": [
+    95,
+    87,
+    92
+  ]
 }

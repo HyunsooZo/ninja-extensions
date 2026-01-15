@@ -1,7 +1,7 @@
 {
   "name": "json-to-object",
-  "displayName": "Json to Objects",
-  "description": "Convert JSON to type definitions for Python, Rust, C, C++, JavaScript, TypeScript, Java, and Kotlin",
+  "displayName": "Json to Objects (9 languages)",
+  "description": "Convert JSON to type definitions for Python, Rust, C, C++, Go, JavaScript, TypeScript, Java, and Kotlin",
   "version": "0.0.1",
   "publisher": "HyunsooJo",
   "icon": "images/icon.png",
