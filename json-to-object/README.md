@@ -13,8 +13,8 @@ A VSCode extension that converts JSON to type definitions for various programmin
 - **TypeScript** - Interface
 - **JavaScript** - JSDoc + Class
 - **Python** - Dataclass
-- **Java** - Class with Getters/Setters
-- **Kotlin** - Data Class
+- **Java** - Record or Class with @JsonProperty, Getters/Setters/Constructor + Lombok
+- **Kotlin** - Data Class with @JsonProperty
 - **Go** - Struct with JSON tags
 - **Rust** - Struct with Serde
 - **C** - Typedef Struct
