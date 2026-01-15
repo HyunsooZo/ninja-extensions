@@ -17,6 +17,11 @@ function typeToJava(typeInfo) {
         return `List<${itemType}>`;
     }
 
+    // Java doesn't support union types, use Object
+    if (typeInfo.type === 'union') {
+        return 'Object';
+    }
+
     if (typeInfo.type === 'object') {
         return 'Object';
     }
@@ -39,7 +44,8 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `List<${toPascalCase(key)}Item>`;
         }
-        return typeToJava(prop.itemType);
+        const itemType = typeToJava(prop.itemType);
+        return `List<${itemType}>`;
     }
     return typeToJava(prop);
 }

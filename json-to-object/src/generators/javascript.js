@@ -17,6 +17,11 @@ function typeToJSDoc(typeInfo) {
         return `Array<${itemType}>`;
     }
 
+    if (typeInfo.type === 'union') {
+        const types = typeInfo.types.map(t => typeToJSDoc(t));
+        return `(${types.join('|')})`;
+    }
+
     if (typeInfo.type === 'object') {
         return 'Object';
     }
@@ -32,18 +37,17 @@ function typeToJSDoc(typeInfo) {
 }
 
 function getTypeForProperty(key, prop) {
-    if (prop.type && typeof prop.type === 'object') {
-        if (prop.type.type === 'object' && prop.type.properties) {
-            return toPascalCase(key);
-        }
-        if (prop.type.type === 'array' && prop.type.itemType) {
-            if (prop.type.itemType.type === 'object' && prop.type.itemType.properties) {
-                return `Array<${toPascalCase(key)}Item>`;
-            }
-            return typeToJSDoc(prop.type);
-        }
+    if (prop.type === 'object' && prop.properties) {
+        return toPascalCase(key);
     }
-    return typeToJSDoc(prop.type);
+    if (prop.type === 'array' && prop.itemType) {
+        if (prop.itemType.type === 'object' && prop.itemType.properties) {
+            return `Array<${toPascalCase(key)}Item>`;
+        }
+        const itemType = typeToJSDoc(prop.itemType);
+        return `Array<${itemType}>`;
+    }
+    return typeToJSDoc(prop);
 }
 
 function generateClass(properties, name) {

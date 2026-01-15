@@ -17,6 +17,11 @@ function typeToKotlin(typeInfo) {
         return `List<${itemType}>`;
     }
 
+    // Kotlin doesn't have native union types, use Any
+    if (typeInfo.type === 'union') {
+        return 'Any';
+    }
+
     if (typeInfo.type === 'object') {
         return 'Any';
     }
@@ -39,7 +44,8 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `List<${toPascalCase(key)}Item>`;
         }
-        return typeToKotlin(prop.itemType);
+        const itemType = typeToKotlin(prop.itemType);
+        return `List<${itemType}>`;
     }
     return typeToKotlin(prop);
 }

@@ -2,6 +2,64 @@ const vscode = require('vscode');
 const { parseJson } = require('./src/parser');
 const generators = require('./src/generators');
 
+// 주요 언어들의 예약어
+const RESERVED_WORDS = new Set([
+    // JavaScript/TypeScript
+    'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default',
+    'delete', 'do', 'else', 'export', 'extends', 'false', 'finally', 'for',
+    'function', 'if', 'import', 'in', 'instanceof', 'let', 'new', 'null',
+    'return', 'static', 'super', 'switch', 'this', 'throw', 'true', 'try',
+    'typeof', 'var', 'void', 'while', 'with', 'yield', 'enum', 'await',
+    'interface', 'type', 'public', 'private', 'protected', 'implements',
+    // Python
+    'def', 'lambda', 'pass', 'raise', 'global', 'nonlocal', 'assert', 'from', 'as',
+    'and', 'or', 'not', 'is', 'None', 'True', 'False', 'async',
+    // Java/Kotlin
+    'abstract', 'boolean', 'byte', 'char', 'double', 'final', 'float', 'int',
+    'long', 'native', 'package', 'short', 'synchronized', 'throws', 'transient',
+    'volatile', 'goto', 'strictfp', 'sealed', 'permits', 'record', 'val', 'var',
+    'fun', 'object', 'when', 'companion', 'data', 'inline', 'lateinit', 'override',
+    // Go
+    'chan', 'defer', 'fallthrough', 'go', 'map', 'range', 'select', 'struct',
+    // Rust
+    'crate', 'dyn', 'extern', 'fn', 'impl', 'loop', 'match', 'mod', 'move',
+    'mut', 'pub', 'ref', 'self', 'Self', 'trait', 'unsafe', 'use', 'where',
+    // C/C++
+    'auto', 'register', 'signed', 'sizeof', 'typedef', 'union', 'unsigned',
+    'asm', 'template', 'typename', 'virtual', 'namespace', 'using', 'operator',
+    'friend', 'inline', 'explicit', 'mutable', 'constexpr', 'decltype', 'nullptr'
+]);
+
+/**
+ * 타입명 유효성 검사
+ * @param {string} name - 검사할 타입명
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateTypeName(name) {
+    if (!name || name.trim().length === 0) {
+        return { valid: false, error: 'Type name cannot be empty' };
+    }
+
+    const trimmed = name.trim();
+
+    // 숫자로 시작하는지 체크
+    if (/^[0-9]/.test(trimmed)) {
+        return { valid: false, error: 'Type name cannot start with a number' };
+    }
+
+    // 허용된 문자만 포함하는지 체크 (알파벳, 숫자, 언더스코어)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed)) {
+        return { valid: false, error: 'Type name can only contain letters, numbers, and underscores' };
+    }
+
+    // 예약어 체크
+    if (RESERVED_WORDS.has(trimmed) || RESERVED_WORDS.has(trimmed.toLowerCase())) {
+        return { valid: false, error: `"${trimmed}" is a reserved word in some languages` };
+    }
+
+    return { valid: true };
+}
+
 function activate(context) {
     let disposable = vscode.commands.registerCommand('json-to-object.convertJson', async function () {
         const editor = vscode.window.activeTextEditor;
@@ -42,10 +100,14 @@ function activate(context) {
             // JSON 파싱
             const parsedData = parseJson(selectedText);
 
-            // 타입명 입력 받기
+            // 타입명 입력 받기 (유효성 검사 포함)
             const typeName = await vscode.window.showInputBox({
                 prompt: 'Enter the name for the type/class',
-                value: 'MyObject'
+                value: 'MyObject',
+                validateInput: (value) => {
+                    const result = validateTypeName(value);
+                    return result.valid ? null : result.error;
+                }
             });
 
             if (!typeName) {

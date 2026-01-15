@@ -17,6 +17,11 @@ function typeToPython(typeInfo, nestedTypes = []) {
         return `list[${itemType}]`;
     }
 
+    if (typeInfo.type === 'union') {
+        const types = typeInfo.types.map(t => typeToPython(t, nestedTypes));
+        return types.join(' | ');
+    }
+
     if (typeInfo.type === 'object') {
         // Check if this is a nested object that has a corresponding class
         return 'dict';  // Will be replaced with actual class name in generateDataclass
@@ -40,7 +45,8 @@ function getTypeForProperty(key, prop, nestedTypes) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `list[${toPascalCase(key)}Item]`;
         }
-        return typeToPython(prop.itemType, nestedTypes);
+        const itemType = typeToPython(prop.itemType, nestedTypes);
+        return `list[${itemType}]`;
     }
     return typeToPython(prop, nestedTypes);
 }

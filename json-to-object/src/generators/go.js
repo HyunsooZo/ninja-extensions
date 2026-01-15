@@ -17,6 +17,11 @@ function typeToGo(typeInfo) {
         return `[]${itemType}`;
     }
 
+    // Go doesn't support union types, use interface{}
+    if (typeInfo.type === 'union') {
+        return 'interface{}';
+    }
+
     if (typeInfo.type === 'object') {
         return 'interface{}';
     }
@@ -39,7 +44,8 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `[]${toPascalCase(key)}Item`;
         }
-        return typeToGo(prop.itemType);
+        const itemType = typeToGo(prop.itemType);
+        return `[]${itemType}`;
     }
     return typeToGo(prop);
 }

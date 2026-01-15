@@ -17,6 +17,11 @@ function typeToCpp(typeInfo) {
         return `std::vector<${itemType}>`;
     }
 
+    // C++ doesn't have native union types for mixed values, use std::any
+    if (typeInfo.type === 'union') {
+        return 'std::any';
+    }
+
     if (typeInfo.type === 'object') {
         return 'std::any';
     }
@@ -39,7 +44,8 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `std::vector<${toPascalCase(key)}Item>`;
         }
-        return typeToCpp(prop.itemType);
+        const itemType = typeToCpp(prop.itemType);
+        return `std::vector<${itemType}>`;
     }
     return typeToCpp(prop);
 }

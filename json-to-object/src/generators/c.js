@@ -17,6 +17,11 @@ function typeToC(typeInfo) {
         return `${itemType}*`;
     }
 
+    // C doesn't have union types for mixed values, use void*
+    if (typeInfo.type === 'union') {
+        return 'void*';
+    }
+
     if (typeInfo.type === 'object') {
         return 'void*';
     }
@@ -39,7 +44,8 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `${toSnakeCase(key)}_item_t*`;
         }
-        return typeToC(prop.itemType);
+        const itemType = typeToC(prop.itemType);
+        return `${itemType}*`;
     }
     return typeToC(prop);
 }

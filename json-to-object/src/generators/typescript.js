@@ -17,6 +17,11 @@ function typeToTypeScript(typeInfo) {
         return `${itemType}[]`;
     }
 
+    if (typeInfo.type === 'union') {
+        const types = typeInfo.types.map(t => typeToTypeScript(t));
+        return types.join(' | ');
+    }
+
     if (typeInfo.type === 'object') {
         return 'object';
     }
@@ -39,7 +44,12 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `${toPascalCase(key)}Item[]`;
         }
-        return typeToTypeScript(prop.itemType);
+        const itemType = typeToTypeScript(prop.itemType);
+        // union 타입이면 괄호로 감싸야 함: (string | number)[]
+        if (prop.itemType.type === 'union') {
+            return `(${itemType})[]`;
+        }
+        return `${itemType}[]`;
     }
     return typeToTypeScript(prop);
 }

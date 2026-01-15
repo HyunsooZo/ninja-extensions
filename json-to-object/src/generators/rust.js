@@ -17,6 +17,11 @@ function typeToRust(typeInfo) {
         return `Vec<${itemType}>`;
     }
 
+    // Rust doesn't have native union types, use serde_json::Value
+    if (typeInfo.type === 'union') {
+        return 'serde_json::Value';
+    }
+
     if (typeInfo.type === 'object') {
         return 'serde_json::Value';
     }
@@ -39,7 +44,8 @@ function getTypeForProperty(key, prop) {
         if (prop.itemType.type === 'object' && prop.itemType.properties) {
             return `Vec<${toPascalCase(key)}Item>`;
         }
-        return typeToRust(prop.itemType);
+        const itemType = typeToRust(prop.itemType);
+        return `Vec<${itemType}>`;
     }
     return typeToRust(prop);
 }
