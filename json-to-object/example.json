@@ -2,7 +2,7 @@
   "name": "Hyunsoo Jo",
   "age": 34,
   "email": "bzhs1992@example.com",
-  "isActive": true,
+  "is_active": true,
   "tags": [
     "developer",
     "designer"
@@ -10,11 +10,18 @@
   "address": {
     "street": "Hwarang-ro 322",
     "city": "Seoul",
-    "zipCode": "12345"
+    "zip_code": "12345"
   },
-  "scores": [
-    95,
-    87,
-    92
+  "coding_test_scores":[
+    {
+    "java": 95,
+    "python": 88,
+    "kotlin": 92
+    },
+    {
+    "java": 95,
+    "python": 88,
+    "kotlin": 92
+    }
   ]
 }

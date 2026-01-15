@@ -6,6 +6,7 @@ A VSCode extension that converts JSON to type definitions for various programmin
 
 ![practice 1](https://raw.githubusercontent.com/HyunsooZo/ninja-extentions/main/json-to-object/images/practice1.gif)
 ![practice 2](https://raw.githubusercontent.com/HyunsooZo/ninja-extentions/main/json-to-object/images/practice2.gif)
+![practice 3](https://raw.githubusercontent.com/HyunsooZo/ninja-extentions/main/json-to-object/images/practice3.gif)
 
 ## Supported Languages
 
@@ -24,6 +25,14 @@ A VSCode extension that converts JSON to type definitions for various programmin
 - Automatic nested object handling (generates separate classes/structs)
 - Array element type inference
 - Language-specific naming conventions (PascalCase, snake_case, etc.)
+- **Output Mode**: Single file or multiple tabs (per type)
+- **Java Options**:
+  - Class or Record (Java 14+)
+  - Lombok support (@Data, @Getter/@Setter)
+  - Constructor generation (NoArgs + AllArgs)
+  - Getter/Setter methods
+  - Inner class or separate classes
+- **Java/Kotlin**: @JsonProperty annotation support
 
 ## Usage
 
@@ -31,7 +40,9 @@ A VSCode extension that converts JSON to type definitions for various programmin
 2. Right-click → **"Convert JSON to Object"** (or `Cmd+Shift+P` → "Convert JSON to Object")
 3. Choose your target language
 4. Enter the type/class name
-5. Generated code opens in a new tab
+5. Select output mode (single file or multiple tabs)
+6. Configure language-specific options (if applicable)
+7. Generated code opens in new tab(s)
 
 ## Examples
 
@@ -152,7 +163,7 @@ pub struct User {
 ## Installation
 
 ### From Marketplace
-Search for "JSON to Objects" in VSCode Extensions.
+Search for **"Json to Objects (9 languages)"** in VSCode Extensions.
 
 ### Local Development
 ```bash
@@ -163,7 +174,7 @@ npm install
 # Or package and install:
 npm install -g @vscode/vsce
 vsce package
-code --install-extension json-to-object-0.0.1.vsix
+code --install-extension json-to-object-1.0.0.vsix
 ```
 
 ## License
